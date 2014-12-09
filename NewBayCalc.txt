@@ -1,0 +1,167 @@
+'Attribute VB_Name = "NewBayCalc"
+Option Explicit
+
+'input
+Public Const ROW_START = 5
+
+Public Const DATUM = "A"     'Division-DEP Code
+Public Const CLM_STOCK = "D"    'ku cun
+'output
+Public Const CLM_CODE = "F"    'yuan jia bu men code
+Public Const CLM_NAME = "G"     'yuan jia bu men mingcheng
+Public Const CLM_SUM = "H"     'system qi mo zai ku
+
+'common global
+Dim rng As Range
+
+
+Function Clean() As Integer
+    
+    Dim i As Long
+    
+    For i = Range("A" & Rows.Count).End(xlUp).Row To ROW_START Step -1
+        If Cells(i, DATUM).Value = "" Then
+            Rows(i).Delete
+        End If
+    Next
+    
+End Function
+
+
+Sub NewBayCalc()
+    Dim RowTotal, RowSum As Long    'total row
+    Dim RowCnt As Integer       'starting row for sum
+    
+    Dim i As Long            'loop index
+        
+    'Range(CLM_CODE&ROW_START:"N"&RowSum).BorderAround Weight:=xlMedium
+    'Range("A1:B2").Borders.LineStyle = xlContinuous
+    'Range("A1:B2").Borders.Weight = xlHairline
+    'Range("A1:B2").BorderAround Weight:=xlMedium
+    
+    Application.ScreenUpdating = False
+    
+    Clean
+    
+    ''get data row number
+    RowTotal = Range(DATUM & Rows.Count).End(xlUp).Row   '
+    
+    ''base data sum total
+    RowSum = RowTotal + 4:       Cells(RowSum, CLM_STOCK).Value = _
+    WorksheetFunction.Sum(Range(Cells(ROW_START, CLM_STOCK), Cells(RowSum, CLM_STOCK)))
+    
+    ''process by row
+    For i = RowTotal To ROW_START Step -1
+        If Range(DATUM & i).Value = "" Then
+            If Range(CLM_CODE & i).Value = "" Then    'empty row
+                Rows(i).EntireRow.Hidden = True
+            ElseIf Range(CLM_CODE & i).Value = Range(DATUM & i + 1).Value Then  'already done
+                Range(Cells(i + 1, 1), Cells(i + 1 + RowCnt, 1)).EntireRow.Hidden = True
+            End If
+            ''for new code start
+            RowCnt = 0
+        ElseIf Range(DATUM & i - 1).Value = "" Then
+            '
+        ElseIf Range(DATUM & i).Value = Range(DATUM & i - 1).Value Then
+            RowCnt = RowCnt + 1           'record rows of same datum
+        Else
+            Rows(i).Select
+            
+            ''insert empty row
+            Cells(i, DATUM).EntireRow.Insert    'one row inserted above this row, ID of this row plus 1
+            
+            ''copy code
+            Cells(i, CLM_CODE).Value = Cells(i + 1, DATUM).Value    'copy datum
+            
+            ''same code sum
+            Cells(i, CLM_SUM).Value = WorksheetFunction.Sum(Range(Cells(i + 1, CLM_STOCK), Cells(i + 1 + RowCnt, CLM_STOCK)))
+            
+            ''find code
+            Set rng = Sheets(1).Columns(CLM_CODE).Find(Cells(i, CLM_CODE).Value)
+            If Not rng Is Nothing Then
+                rng.offset(0, 1).Copy Destination:=Sheets(2).Cells(i, CLM_NAME)
+            End If
+            
+            ''hide row
+            Range(Cells(i + 1, 1), Cells(i + 1 + RowCnt, 1)).EntireRow.Hidden = True
+            
+            ''for new code start
+            RowCnt = 0
+        End If
+    Next
+    
+    ''new total row number after line inserted/deleted
+    RowSum = Range(CLM_STOCK & Rows.Count).End(xlUp).Row   '
+    
+    ''sum total data row
+    Cells(RowSum, CLM_CODE).Value = "SumTotal"
+    
+    Set rng = Range(CLM_SUM & ROW_START & ":" & CLM_SUM & RowSum)
+    'or:Range(Cells(ROW_START, CLM_SUM), Cells(RowSum, CLM_SUM))
+    Cells(RowSum, CLM_SUM).Value = WorksheetFunction.Sum(rng)
+    ''number format
+    rng.Select
+    rng.NumberFormat = "0.000_ "
+    
+    ''borders, font, alignment
+    With Range(Cells(ROW_START, CLM_CODE), Cells(RowSum, "N"))
+        With .Borders
+            .LineStyle = xlContinuous
+            .ColorIndex = xlAutomatic
+            .TintAndShade = 0
+            .Weight = xlHairline
+        End With
+        With .Font
+            .name = "MS PGothic"
+            .FontStyle = ""
+        End With
+        .BorderAround xlContinuous, xlMedium, xlColorIndexAutomatic
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlCenter
+        .Select
+        '.Activate
+    End With
+    
+    'screen
+    Application.ScreenUpdating = True
+    Cells(ROW_START, "I").Activate
+    
+    MsgBox "CONGRATULATIONS! ! !" & vbCrLf _
+            & vbCrLf _
+            & "YOUR WORK IS DONE." & vbCrLf _
+
+    ''hidden 20141014: uneffective, abort this method!
+    'For i = ROW_START To RowTotal
+    '    If Cells(i, DATUM).Value <> "" Then
+    '        Rows(i).Hidden = True
+    '    End If
+    'Next
+    'line style
+    'Dim
+    
+    'Range(Cells(4, CLM_CODE), Cells(RowTotal, "N")).Borders.LineStyle = xlThick
+    
+End Sub
+
+Sub try()
+
+    Dim row1, row2 As Integer
+    row1 = 1
+    row2 = 3
+    row2 = WorksheetFunction.Sum(Range("a" & row1 & ":" & "a" & row2))
+    row1 = Workbooks.Count
+    
+    Dim i As Integer
+    For i = 1 To row1
+        Workbooks(i).Activate
+    Next
+    
+    Dim ret As String
+    row1 = InputBox("日本語チェック", "打个分吧!", "100")
+    row1 = row1 + 1
+    'Cells(1, "B").Formula = "=sum(range("A"&row1):A3)"
+End Sub
+
+
+
+
